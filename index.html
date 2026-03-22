@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Neon Snake Arena</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐍</text></svg>">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>Neon Snake Arena</h1>
+      <p class="subtitle">Play it yourself or watch the AI take over</p>
+    </header>
+
+    <div id="game-wrapper">
+      <div id="hud">
+        <div class="hud-item">
+          <span class="hud-label">Score</span>
+          <span id="score" class="hud-value">0</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Best</span>
+          <span id="best-score" class="hud-value">0</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Length</span>
+          <span id="snake-length" class="hud-value">3</span>
+        </div>
+      </div>
+
+      <div id="canvas-container">
+        <canvas id="game-canvas"></canvas>
+        <div id="overlay" class="hidden">
+          <div id="overlay-text">PAUSED</div>
+        </div>
+      </div>
+
+      <div id="controls">
+        <div class="control-row">
+          <button id="btn-ai" class="btn btn-primary active" title="Toggle AI Autoplay">
+            <span class="btn-icon">🤖</span> AI Autoplay
+          </button>
+          <button id="btn-pause" class="btn" title="Pause / Resume (Space)">
+            <span class="btn-icon">⏸</span> Pause
+          </button>
+          <button id="btn-restart" class="btn" title="Restart Game (R)">
+            <span class="btn-icon">🔄</span> Restart
+          </button>
+        </div>
+
+        <div class="control-row">
+          <div class="slider-group">
+            <label for="speed-slider">Speed</label>
+            <input type="range" id="speed-slider" min="1" max="10" value="5" />
+            <span id="speed-label">5</span>
+          </div>
+          <div class="slider-group">
+            <label for="grid-slider">Grid</label>
+            <input type="range" id="grid-slider" min="15" max="35" value="20" step="5" />
+            <span id="grid-label">20</span>
+          </div>
+        </div>
+
+        <div class="control-row">
+          <label class="food-label">Food Style</label>
+          <div id="food-options" class="food-options">
+            <button class="food-btn active" data-food="classic" title="Classic">🟢</button>
+            <button class="food-btn" data-food="apple" title="Apple">🍎</button>
+            <button class="food-btn" data-food="cherry" title="Cherry">🍒</button>
+            <button class="food-btn" data-food="star" title="Star">⭐</button>
+            <button class="food-btn" data-food="diamond" title="Diamond">💎</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="mobile-dpad">
+        <button class="dpad-btn dpad-up" data-dir="up">▲</button>
+        <button class="dpad-btn dpad-left" data-dir="left">◀</button>
+        <button class="dpad-btn dpad-right" data-dir="right">▶</button>
+        <button class="dpad-btn dpad-down" data-dir="down">▼</button>
+      </div>
+    </div>
+
+    <footer>
+      <button id="btn-copy" class="btn btn-copy" title="Copy source to clipboard">
+        <span class="btn-icon">📋</span> Copy and Customize
+      </button>
+      <p class="footer-text">Arrow keys / WASD to move &middot; Space to pause &middot; R to restart</p>
+    </footer>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
