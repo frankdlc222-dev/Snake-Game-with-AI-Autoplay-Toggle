@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════
-   Neon Snake Arena – game.js
+   Snake Arena – game.js
    ═══════════════════════════════════════════════════ */
 
 (() => {
@@ -10,6 +10,7 @@
   const ctx = canvas.getContext("2d");
   const overlay = document.getElementById("overlay");
   const overlayText = document.getElementById("overlay-text");
+  const overlaySub = document.getElementById("overlay-sub");
   const scoreEl = document.getElementById("score");
   const bestEl = document.getElementById("best-score");
   const lengthEl = document.getElementById("snake-length");
@@ -24,6 +25,22 @@
   const foodBtns = document.querySelectorAll(".food-btn");
   const dpadBtns = document.querySelectorAll(".dpad-btn");
 
+  /* ── Colors ─────────────────────────────────────── */
+  const COLORS = {
+    bg: "#0a0c16",
+    grid: "rgba(37, 42, 74, 0.35)",
+    snakeHead: "#6c63ff",
+    snakeBody: "#22d67a",
+    snakeBodyDim: "#167a4a",
+    food: "#f43f7a",
+    foodGlow: "rgba(244, 63, 122, 0.25)",
+    particle: "#22d67a",
+    deathParticle: "#f43f7a",
+    eyeColor: "#0a0c16",
+    headGlow: "rgba(108, 99, 255, 0.3)",
+    bodyGlow: "rgba(34, 214, 122, 0.12)",
+  };
+
   /* ── State ─────────────────────────────────────── */
   let gridSize = 20;
   let cellPx;
@@ -33,19 +50,20 @@
   let lastTick = 0;
   let particles = [];
 
-  bestScore = parseInt(localStorage.getItem("neon-snake-best") || "0", 10);
+  bestScore = parseInt(localStorage.getItem("snake-arena-best") || "0", 10);
   bestEl.textContent = bestScore;
 
   /* ── Helpers ───────────────────────────────────── */
   const rand = (n) => Math.floor(Math.random() * n);
   const tickInterval = () => {
     const s = parseInt(speedSlider.value, 10);
-    return 260 - s * 24;          // speed 1 → 236 ms, 10 → 20 ms
+    return 260 - s * 24; // speed 1 → 236 ms, 10 → 20 ms
   };
 
   function resizeCanvas() {
     const container = canvas.parentElement;
     const size = container.clientWidth;
+    if (size <= 0) return; // guard against 0-width container
     canvas.width = size;
     canvas.height = size;
     cellPx = size / gridSize;
@@ -55,6 +73,16 @@
   function init() {
     gridSize = parseInt(gridSlider.value, 10);
     resizeCanvas();
+
+    // Guard: if canvas has no size, retry after layout
+    if (canvas.width <= 0 || canvas.height <= 0) {
+      requestAnimationFrame(() => {
+        resizeCanvas();
+        init();
+      });
+      return;
+    }
+
     const mid = Math.floor(gridSize / 2);
     snake = [
       { x: mid, y: mid },
@@ -80,10 +108,12 @@
   function placeFood() {
     const occupied = new Set(snake.map((s) => `${s.x},${s.y}`));
     let fx, fy;
+    let attempts = 0;
     do {
       fx = rand(gridSize);
       fy = rand(gridSize);
-    } while (occupied.has(`${fx},${fy}`));
+      attempts++;
+    } while (occupied.has(`${fx},${fy}`) && attempts < 1000);
     food = { x: fx, y: fy };
   }
 
@@ -117,7 +147,7 @@
 
   function drawParticles() {
     for (const p of particles) {
-      ctx.globalAlpha = p.life;
+      ctx.globalAlpha = p.life * 0.8;
       ctx.fillStyle = p.color;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
@@ -131,9 +161,7 @@
     const head = snake[0];
     const target = food;
 
-    // BFS shortest path, avoids body
     const blocked = new Set(snake.map((s) => `${s.x},${s.y}`));
-    // Don't block the tail – it will move away (unless we just ate)
     const tailKey = `${snake[snake.length - 1].x},${snake[snake.length - 1].y}`;
     blocked.delete(tailKey);
 
@@ -172,14 +200,13 @@
 
     if (foundPath && foundPath.length > 0) {
       const move = foundPath[0];
-      // Prevent 180° reversal
       if (!(move.x === -dir.x && move.y === -dir.y)) {
         nextDir = move;
         return;
       }
     }
 
-    // Fallback: pick any safe direction
+    // Fallback: pick safest direction
     const safeChoices = dirs.filter((d) => {
       if (d.x === -dir.x && d.y === -dir.y) return false;
       const nx = head.x + d.x;
@@ -190,7 +217,6 @@
     });
 
     if (safeChoices.length > 0) {
-      // Prefer direction that keeps options open
       safeChoices.sort((a, b) => {
         const countOpen = (d) => {
           const nx = head.x + d.x;
@@ -199,7 +225,14 @@
           for (const d2 of dirs) {
             const nnx = nx + d2.x;
             const nny = ny + d2.y;
-            if (nnx >= 0 && nnx < gridSize && nny >= 0 && nny < gridSize && !blocked.has(`${nnx},${nny}`)) c++;
+            if (
+              nnx >= 0 &&
+              nnx < gridSize &&
+              nny >= 0 &&
+              nny < gridSize &&
+              !blocked.has(`${nnx},${nny}`)
+            )
+              c++;
           }
           return c;
         };
@@ -240,18 +273,17 @@
       scoreEl.textContent = score;
       lengthEl.textContent = snake.length;
       scoreEl.classList.remove("score-pop");
-      void scoreEl.offsetWidth;          // reflow
+      void scoreEl.offsetWidth;
       scoreEl.classList.add("score-pop");
 
-      // Particles at food position
       const cx = (food.x + 0.5) * cellPx;
       const cy = (food.y + 0.5) * cellPx;
-      spawnParticles(cx, cy, "#39ff14", 12);
+      spawnParticles(cx, cy, COLORS.particle, 12);
 
       if (score > bestScore) {
         bestScore = score;
         bestEl.textContent = bestScore;
-        localStorage.setItem("neon-snake-best", bestScore);
+        localStorage.setItem("snake-arena-best", bestScore);
       }
       placeFood();
     } else {
@@ -263,8 +295,9 @@
     alive = false;
     const cx = (snake[0].x + 0.5) * cellPx;
     const cy = (snake[0].y + 0.5) * cellPx;
-    spawnParticles(cx, cy, "#ff2d95", 30);
-    overlayText.innerHTML = `GAME OVER<br><span style="font-size:1rem;color:#00f0ff">Score: ${score}</span>`;
+    spawnParticles(cx, cy, COLORS.deathParticle, 30);
+    overlayText.textContent = "GAME OVER";
+    overlaySub.textContent = `Score: ${score}`;
     overlay.classList.remove("hidden");
   }
 
@@ -272,13 +305,16 @@
   function draw() {
     const w = canvas.width;
     const h = canvas.height;
-    ctx.clearRect(0, 0, w, h);
 
-    // Background grid lines
-    ctx.strokeStyle = "rgba(30,30,74,0.6)";
-    ctx.lineWidth = 0.5;
+    // Background
+    ctx.fillStyle = COLORS.bg;
+    ctx.fillRect(0, 0, w, h);
+
+    // Grid lines
+    ctx.strokeStyle = COLORS.grid;
+    ctx.lineWidth = 1;
     for (let i = 0; i <= gridSize; i++) {
-      const p = i * cellPx;
+      const p = Math.round(i * cellPx) + 0.5;
       ctx.beginPath();
       ctx.moveTo(p, 0);
       ctx.lineTo(p, h);
@@ -297,54 +333,70 @@
       const seg = snake[i];
       const x = seg.x * cellPx;
       const y = seg.y * cellPx;
-      const pad = cellPx * 0.08;
+      const pad = cellPx * 0.1;
       const isHead = i === 0;
 
-      // Glow
-      const t = performance.now() / 600;
-      const glowAlpha = isHead ? 0.5 + 0.2 * Math.sin(t) : 0.15;
-      const grad = ctx.createRadialGradient(
-        x + cellPx / 2, y + cellPx / 2, 0,
-        x + cellPx / 2, y + cellPx / 2, cellPx
-      );
-      const baseColor = isHead ? "0,240,255" : "57,255,20";
-      grad.addColorStop(0, `rgba(${baseColor},${glowAlpha})`);
-      grad.addColorStop(1, `rgba(${baseColor},0)`);
-      ctx.fillStyle = grad;
-      ctx.fillRect(x - cellPx * 0.3, y - cellPx * 0.3, cellPx * 1.6, cellPx * 1.6);
+      // Subtle glow behind segments
+      if (isHead) {
+        const grad = ctx.createRadialGradient(
+          x + cellPx / 2, y + cellPx / 2, 0,
+          x + cellPx / 2, y + cellPx / 2, cellPx * 1.2
+        );
+        grad.addColorStop(0, COLORS.headGlow);
+        grad.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(x - cellPx * 0.4, y - cellPx * 0.4, cellPx * 1.8, cellPx * 1.8);
+      }
 
       // Body segment
-      const brightness = 1 - (i / snake.length) * 0.55;
+      const t = i / snake.length;
       if (isHead) {
-        ctx.fillStyle = "#00f0ff";
+        ctx.fillStyle = COLORS.snakeHead;
       } else {
-        ctx.fillStyle = `rgb(${Math.round(30 * brightness)},${Math.round(255 * brightness)},${Math.round(20 * brightness)})`;
+        // Gradient from bright to dim along body
+        const r = Math.round(34 + (22 - 34) * t);
+        const g = Math.round(214 + (122 - 214) * t);
+        const b = Math.round(122 + (74 - 122) * t);
+        ctx.fillStyle = `rgb(${r},${g},${b})`;
       }
-      const r = cellPx * 0.22;
-      roundRect(ctx, x + pad, y + pad, cellPx - pad * 2, cellPx - pad * 2, r);
+      const cornerR = cellPx * 0.25;
+      roundRect(ctx, x + pad, y + pad, cellPx - pad * 2, cellPx - pad * 2, cornerR);
       ctx.fill();
 
       // Head eyes
       if (isHead) {
-        ctx.fillStyle = "#0a0a1a";
-        const eyeSize = cellPx * 0.12;
-        const eyeOff = cellPx * 0.22;
+        ctx.fillStyle = COLORS.eyeColor;
+        const eyeSize = cellPx * 0.1;
         let ex1, ey1, ex2, ey2;
         if (dir.x === 1) {
-          ex1 = x + cellPx * 0.65; ey1 = y + cellPx * 0.3;
-          ex2 = x + cellPx * 0.65; ey2 = y + cellPx * 0.7;
+          ex1 = x + cellPx * 0.65; ey1 = y + cellPx * 0.32;
+          ex2 = x + cellPx * 0.65; ey2 = y + cellPx * 0.68;
         } else if (dir.x === -1) {
-          ex1 = x + cellPx * 0.35; ey1 = y + cellPx * 0.3;
-          ex2 = x + cellPx * 0.35; ey2 = y + cellPx * 0.7;
+          ex1 = x + cellPx * 0.35; ey1 = y + cellPx * 0.32;
+          ex2 = x + cellPx * 0.35; ey2 = y + cellPx * 0.68;
         } else if (dir.y === -1) {
-          ex1 = x + cellPx * 0.3; ey1 = y + cellPx * 0.35;
-          ex2 = x + cellPx * 0.7; ey2 = y + cellPx * 0.35;
+          ex1 = x + cellPx * 0.32; ey1 = y + cellPx * 0.35;
+          ex2 = x + cellPx * 0.68; ey2 = y + cellPx * 0.35;
         } else {
-          ex1 = x + cellPx * 0.3; ey1 = y + cellPx * 0.65;
-          ex2 = x + cellPx * 0.7; ey2 = y + cellPx * 0.65;
+          ex1 = x + cellPx * 0.32; ey1 = y + cellPx * 0.65;
+          ex2 = x + cellPx * 0.68; ey2 = y + cellPx * 0.65;
         }
-        ctx.beginPath(); ctx.arc(ex1, ey1, eyeSize, 0, Math.PI * 2); ctx.fill();
-        ctx.beginPath(); ctx.arc(ex2, ey2, eyeSize, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(ex1, ey1, eyeSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(ex2, ey2, eyeSize, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Eye highlights
+        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        const hlSize = eyeSize * 0.45;
+        ctx.beginPath();
+        ctx.arc(ex1 + hlSize * 0.3, ey1 - hlSize * 0.3, hlSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(ex2 + hlSize * 0.3, ey2 - hlSize * 0.3, hlSize, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
 
@@ -358,31 +410,35 @@
     const cx = x + cellPx / 2;
     const cy = y + cellPx / 2;
 
-    // Pulse glow
-    const t = performance.now() / 400;
-    const pulse = 0.6 + 0.4 * Math.sin(t);
+    // Pulse
+    const t = performance.now() / 500;
+    const pulse = 0.7 + 0.3 * Math.sin(t);
 
-    const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, cellPx * 1.2);
-    glowGrad.addColorStop(0, `rgba(255,45,149,${0.3 * pulse})`);
-    glowGrad.addColorStop(1, "rgba(255,45,149,0)");
+    // Glow
+    const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, cellPx * 1.1);
+    glowGrad.addColorStop(0, `rgba(244,63,122,${0.2 * pulse})`);
+    glowGrad.addColorStop(1, "rgba(244,63,122,0)");
     ctx.fillStyle = glowGrad;
-    ctx.fillRect(x - cellPx * 0.5, y - cellPx * 0.5, cellPx * 2, cellPx * 2);
+    ctx.fillRect(x - cellPx * 0.4, y - cellPx * 0.4, cellPx * 1.8, cellPx * 1.8);
 
     if (foodStyle === "classic") {
-      ctx.fillStyle = "#ff2d95";
-      ctx.shadowColor = "#ff2d95";
-      ctx.shadowBlur = 10 * pulse;
+      ctx.fillStyle = COLORS.food;
       ctx.beginPath();
-      ctx.arc(cx, cy, cellPx * 0.35, 0, Math.PI * 2);
+      ctx.arc(cx, cy, cellPx * 0.32, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
+
+      // Highlight
+      ctx.fillStyle = "rgba(255,255,255,0.3)";
+      ctx.beginPath();
+      ctx.arc(cx - cellPx * 0.08, cy - cellPx * 0.08, cellPx * 0.12, 0, Math.PI * 2);
+      ctx.fill();
     } else {
       const emojis = { apple: "🍎", cherry: "🍒", star: "⭐", diamond: "💎" };
       const emoji = emojis[foodStyle] || "🟢";
-      ctx.font = `${cellPx * 0.75}px serif`;
+      ctx.font = `${cellPx * 0.7}px serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(emoji, cx, cy + cellPx * 0.04);
+      ctx.fillText(emoji, cx, cy + cellPx * 0.03);
     }
   }
 
@@ -433,15 +489,12 @@
     if (mapped) {
       e.preventDefault();
       if (aiMode) {
-        // User input disables AI
         aiMode = false;
         btnAI.classList.remove("active");
       }
-      // Prevent 180° reversal
       if (!(mapped.x === -dir.x && mapped.y === -dir.y)) {
         nextDir = mapped;
       }
-      // If dead, restart
       if (!alive) init();
       return;
     }
@@ -471,6 +524,7 @@
     paused = !paused;
     overlay.classList.toggle("hidden", !paused);
     overlayText.textContent = "PAUSED";
+    overlaySub.textContent = "Press Space to resume";
     btnPause.querySelector(".btn-icon").textContent = paused ? "▶" : "⏸";
   }
 
@@ -492,7 +546,12 @@
   });
 
   /* D-Pad */
-  const dpadMap = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+  const dpadMap = {
+    up: { x: 0, y: -1 },
+    down: { x: 0, y: 1 },
+    left: { x: -1, y: 0 },
+    right: { x: 1, y: 0 },
+  };
   dpadBtns.forEach((btn) => {
     const handler = (e) => {
       e.preventDefault();
@@ -517,14 +576,13 @@
         fetch("style.css").then((r) => r.text()),
         fetch("game.js").then((r) => r.text()),
       ]);
-      const full = `<!-- Neon Snake Arena – Single File Bundle -->\n${htmlRes}\n<style>\n${cssRes}\n</style>\n<script>\n${jsRes}\n<\/script>`;
+      const full = `<!-- Snake Arena – Single File Bundle -->\n${htmlRes}\n<style>\n${cssRes}\n</style>\n<script>\n${jsRes}\n<\/script>`;
       await navigator.clipboard.writeText(full);
       btnCopy.querySelector(".btn-icon").textContent = "✅";
       setTimeout(() => {
         btnCopy.querySelector(".btn-icon").textContent = "📋";
       }, 2000);
     } catch {
-      // Fallback: just copy HTML
       const ta = document.createElement("textarea");
       ta.value = document.documentElement.outerHTML;
       document.body.appendChild(ta);
@@ -539,7 +597,9 @@
   });
 
   /* ── Resize handling ───────────────────────────── */
-  window.addEventListener("resize", resizeCanvas);
+  window.addEventListener("resize", () => {
+    resizeCanvas();
+  });
 
   /* ── Start with AI on ──────────────────────────── */
   aiMode = true;
