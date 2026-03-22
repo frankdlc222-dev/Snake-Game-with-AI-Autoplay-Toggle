@@ -21,7 +21,6 @@
   const speedLabel = document.getElementById("speed-label");
   const gridSlider = document.getElementById("grid-slider");
   const gridLabel = document.getElementById("grid-label");
-  const btnCopy = document.getElementById("btn-copy");
   const foodBtns = document.querySelectorAll(".food-btn");
   const dpadBtns = document.querySelectorAll(".dpad-btn");
 
@@ -566,34 +565,6 @@
     };
     btn.addEventListener("touchstart", handler, { passive: false });
     btn.addEventListener("mousedown", handler);
-  });
-
-  /* ── Copy & Customize ──────────────────────────── */
-  btnCopy.addEventListener("click", async () => {
-    try {
-      const [htmlRes, cssRes, jsRes] = await Promise.all([
-        fetch("index.html").then((r) => r.text()),
-        fetch("style.css").then((r) => r.text()),
-        fetch("game.js").then((r) => r.text()),
-      ]);
-      const full = `<!-- Snake Arena – Single File Bundle -->\n${htmlRes}\n<style>\n${cssRes}\n</style>\n<script>\n${jsRes}\n<\/script>`;
-      await navigator.clipboard.writeText(full);
-      btnCopy.querySelector(".btn-icon").textContent = "✅";
-      setTimeout(() => {
-        btnCopy.querySelector(".btn-icon").textContent = "📋";
-      }, 2000);
-    } catch {
-      const ta = document.createElement("textarea");
-      ta.value = document.documentElement.outerHTML;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      ta.remove();
-      btnCopy.querySelector(".btn-icon").textContent = "✅";
-      setTimeout(() => {
-        btnCopy.querySelector(".btn-icon").textContent = "📋";
-      }, 2000);
-    }
   });
 
   /* ── Resize handling ───────────────────────────── */
