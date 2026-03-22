@@ -395,17 +395,6 @@ footer {
   gap: 0.5rem;
 }
 
-.btn-copy {
-  border-color: var(--border);
-  color: var(--text-dim);
-  font-size: 0.75rem;
-}
-
-.btn-copy:hover {
-  color: var(--text);
-  border-color: var(--border-hover);
-}
-
 .footer-text {
   font-size: 0.75rem;
   color: var(--text-muted);
