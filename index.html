@@ -3,15 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Neon Snake Arena</title>
+  <title>Snake Arena</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐍</text></svg>">
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="app">
     <header>
-      <h1>Neon Snake Arena</h1>
+      <h1><span class="emoji">🐍</span> Snake Arena</h1>
       <p class="subtitle">Play it yourself or watch the AI take over</p>
     </header>
 
@@ -35,6 +34,7 @@
         <canvas id="game-canvas"></canvas>
         <div id="overlay" class="hidden">
           <div id="overlay-text">PAUSED</div>
+          <div id="overlay-sub"></div>
         </div>
       </div>
 
@@ -88,7 +88,9 @@
       <button id="btn-copy" class="btn btn-copy" title="Copy source to clipboard">
         <span class="btn-icon">📋</span> Copy and Customize
       </button>
-      <p class="footer-text">Arrow keys / WASD to move &middot; Space to pause &middot; R to restart</p>
+      <p class="footer-text">
+        <kbd>Arrow</kbd> / <kbd>WASD</kbd> to move · <kbd>Space</kbd> to pause · <kbd>R</kbd> to restart
+      </p>
     </footer>
   </div>
 
